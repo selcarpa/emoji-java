@@ -1,4 +1,4 @@
-package com.vdurmont.emoji;
+package one.tain.emoji;
 
 import java.util.Collection;
 import java.util.HashMap;

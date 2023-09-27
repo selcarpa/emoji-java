@@ -1,4 +1,4 @@
-package com.vdurmont.emoji;
+package one.tain.emoji;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -12,18 +12,20 @@ import sun.net.SocksProxy;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * This app generate the emoji json from https://unicode.org/emoji/charts/full-emoji-list.html ;)
  * <p/>
  * Run with:
- * mvn exec:java -Dexec.mainClass="com.vdurmont.emoji.JsonGenerator"
+ * mvn exec:java -Dexec.mainClass="one.tain.emoji.JsonGenerator"
  */
 public class JsonGenerator {
+    private static final Logger LOGGER = Logger.getLogger(JsonGenerator.class.getName());
+
     private static final String ARGS_NAME_PROXY_HOST = "proxy";
     private static final String ARGS_NAME_PROXY_PORT = "port";
     private static final String ARGS_NAME_OFFLINE_PATH = "path";
@@ -33,7 +35,7 @@ public class JsonGenerator {
     private static final String ARGS_NAME_EMOJI_I18N_JSON_PATH = "emoji_i18n_path";
     private static final String STRING_SYMBOL_EQUAL = "=";
     private static final String EMOJI_REMOTE_ONLINE_URL = "https://unicode.org/emoji/charts/full-emoji-list.html";
-    private static Map<String, String> ARGS_MAP;
+    private static Map<String, String> ARGS_MAP; 
 
     public static void main(String[] args) throws IOException {
         ARGS_MAP = argsParser(args);
@@ -84,12 +86,12 @@ public class JsonGenerator {
             emojis.put(emoji);
         }
 
-        String emojiJson = emojis.toString(4).replaceAll("/", "\\\\")
-                .replaceAll("\\^\\^u", "\\\\u");
+        String emojiJson = emojis.toString(4).replace("/", "\\\\")
+                .replace("\\^\\^u", "\\\\u");
 
         File emojiFile = new File(ARGS_MAP.getOrDefault(ARGS_NAME_SAVE_PATH, System.getProperty("java.io.tmpdir")
                 + File.separator + "emoji.json"));
-        System.out.println("save to: " + emojiFile.getAbsolutePath());
+        LOGGER.info("save to: " + emojiFile.getAbsolutePath());
         Files.write(emojiFile.toPath(), Collections.singleton(emojiJson), StandardCharsets.UTF_8);
     }
 
@@ -130,7 +132,7 @@ public class JsonGenerator {
      */
     private static Connection getConnection() {
         Connection connect = Jsoup.connect(ARGS_MAP.getOrDefault(ARGS_NAME_ONLINE_URL, EMOJI_REMOTE_ONLINE_URL))
-                .proxy(SocksProxy.create(new InetSocketAddress("127.0.0.1",10808),5))
+                .proxy(SocksProxy.create(new InetSocketAddress("127.0.0.1", 10808), 5))
                 .maxBodySize(Integer.MAX_VALUE);
         if (!isBlank(ARGS_MAP.get(ARGS_NAME_PROXY_HOST)) && !isBlank(ARGS_MAP.get(ARGS_NAME_PROXY_PORT))) {
             connect.proxy(ARGS_MAP.get(ARGS_NAME_PROXY_HOST), Integer.parseInt(ARGS_MAP.get(ARGS_NAME_PROXY_PORT)));

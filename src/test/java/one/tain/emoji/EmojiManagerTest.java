@@ -1,4 +1,4 @@
-package com.vdurmont.emoji;
+package one.tain.emoji;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

@@ -1,5 +1,7 @@
-package com.vdurmont.emoji;
+package one.tain.emoji;
 
+import one.tain.emoji.Emoji;
+import one.tain.emoji.EmojiLoader;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Test;

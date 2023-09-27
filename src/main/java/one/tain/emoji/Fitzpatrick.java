@@ -1,4 +1,4 @@
-package com.vdurmont.emoji;
+package one.tain.emoji;
 
 /**
  * Enum that represents the Fitzpatrick modifiers supported by the emojis.

@@ -1,4 +1,6 @@
-package com.vdurmont.emoji;
+package one.tain.emoji;
+
+import one.tain.emoji.Emoji;
 
 public class TestTools {
   public static boolean containsEmojis(

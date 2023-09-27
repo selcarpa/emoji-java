@@ -1,7 +1,7 @@
-package com.vdurmont.emoji;
+package one.tain.emoji;
 
-import com.vdurmont.emoji.EmojiParser.AliasCandidate;
-import com.vdurmont.emoji.EmojiParser.FitzpatrickAction;
+import one.tain.emoji.EmojiParser.AliasCandidate;
+import one.tain.emoji.EmojiParser.FitzpatrickAction;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
