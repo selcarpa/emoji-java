@@ -1,5 +1,8 @@
 package one.tain.emoji;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.Connection;
@@ -7,14 +10,13 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import sun.net.SocksProxy;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -35,15 +37,18 @@ public class JsonGenerator {
     private static final String ARGS_NAME_EMOJI_I18N_JSON_PATH = "emoji_i18n_path";
     private static final String STRING_SYMBOL_EQUAL = "=";
     private static final String EMOJI_REMOTE_ONLINE_URL = "https://unicode.org/emoji/charts/full-emoji-list.html";
-    private static Map<String, String> ARGS_MAP; 
+    private static Map<String, String> ARGS_MAP;
 
     public static void main(String[] args) throws IOException {
         ARGS_MAP = argsParser(args);
         Document root = getDocument();
 
-        Elements tdTags, trTags = root.getElementsByTag("tr");
-        String aliasBigHead = null, aliasMediumHead = null;
-        Element bighead, mediumhead;
+        Elements tdTags;
+        Elements trTags = root.getElementsByTag("tr");
+        String aliasBigHead = null;
+        String aliasMediumHead = null;
+        Element bighead;
+        Element mediumhead;
         JSONArray emojis = new JSONArray();
         String desc;
         JSONObject emoji;
@@ -64,7 +69,7 @@ public class JsonGenerator {
             if (!tdTags.get(1).hasClass("code")) {
                 continue;
             }
-            desc = tdTags.last().text().replaceAll("[^\\p{L}\\p{M}\\p{N}\\p{P}\\p{Z}\\p{Cf}\\p{Cs}\\p{Sc}\\s]", "");
+            desc = Objects.requireNonNull(tdTags.last()).text().replaceAll("[^\\p{L}\\p{M}\\p{N}\\p{P}\\p{Z}\\p{Cf}\\p{Cs}\\p{Sc}\\s]", "");
 
             String emojiChar = tdTags.get(2).text();
             if (tdTags.get(1).text().endsWith("U+FE0F U+20E3")) {
@@ -118,11 +123,21 @@ public class JsonGenerator {
      * @throws IOException io exception
      */
     private static Document getDocument() throws IOException {
-        if (isBlank(ARGS_MAP.get(ARGS_NAME_OFFLINE_PATH))) {
-            return getConnection().get();
-        } else {
-            return Jsoup.parse(new File(ARGS_MAP.get(ARGS_NAME_OFFLINE_PATH)), "utf-8", "https://unicode.org/");
+        OkHttpClient okHttpClient = new OkHttpClient();
+
+        Request request = new Request.Builder()
+                .url(ARGS_MAP.getOrDefault(ARGS_NAME_ONLINE_URL, EMOJI_REMOTE_ONLINE_URL))
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            assert response.body() != null;
+            return Jsoup.parse(response.body().string());
         }
+//        if (isBlank(ARGS_MAP.get(ARGS_NAME_OFFLINE_PATH))) {
+//            return getConnection().get();
+//        } else {
+//            return Jsoup.parse(new File(ARGS_MAP.get(ARGS_NAME_OFFLINE_PATH)), "utf-8", "https://unicode.org/");
+//        }
     }
 
     /**
@@ -132,7 +147,8 @@ public class JsonGenerator {
      */
     private static Connection getConnection() {
         Connection connect = Jsoup.connect(ARGS_MAP.getOrDefault(ARGS_NAME_ONLINE_URL, EMOJI_REMOTE_ONLINE_URL))
-                .proxy(SocksProxy.create(new InetSocketAddress("127.0.0.1", 10808), 5))
+//                .proxy(SocksProxy.create(new InetSocketAddress("127.0.0.1", 10808), 5))
+//                .timeout(Integer.MAX_VALUE)
                 .maxBodySize(Integer.MAX_VALUE);
         if (!isBlank(ARGS_MAP.get(ARGS_NAME_PROXY_HOST)) && !isBlank(ARGS_MAP.get(ARGS_NAME_PROXY_PORT))) {
             connect.proxy(ARGS_MAP.get(ARGS_NAME_PROXY_HOST), Integer.parseInt(ARGS_MAP.get(ARGS_NAME_PROXY_PORT)));
@@ -147,7 +163,7 @@ public class JsonGenerator {
      * @return blank is true,else false
      */
     private static boolean isBlank(String str) {
-        return Objects.isNull(str) || "".equals(str.trim());
+        return Objects.isNull(str) || str.trim().isEmpty();
     }
 
     /**
@@ -173,7 +189,7 @@ public class JsonGenerator {
     }
 
     private static Map<String, JSONObject> getJsonMapFromEmojiJson(String emojiPath) {
-        if (Objects.isNull(emojiPath) || emojiPath.length() == 0) {
+        if (Objects.isNull(emojiPath) || emojiPath.isEmpty()) {
             return Collections.emptyMap();
         }
         Map<String, JSONObject> emojiMap;
@@ -185,7 +201,7 @@ public class JsonGenerator {
                 emojiMap.put(emoji.getString("emojiChar"), emoji);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            LOGGER.log(Level.SEVERE, ex.getMessage(), ex);
             emojiMap = Collections.emptyMap();
         }
         return emojiMap;
@@ -204,7 +220,7 @@ public class JsonGenerator {
                 emojiMap.put(emoji.getString("emojiChar"), emoji.getString("description"));
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            LOGGER.log(Level.SEVERE, ex.getMessage(), ex);
             emojiMap = Collections.emptyMap();
         }
         return emojiMap;
