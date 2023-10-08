@@ -5,7 +5,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -27,60 +26,52 @@ import java.util.logging.Logger;
  */
 public class JsonGenerator {
     private static final Logger LOGGER = Logger.getLogger(JsonGenerator.class.getName());
-
-    private static final String ARGS_NAME_PROXY_HOST = "proxy";
-    private static final String ARGS_NAME_PROXY_PORT = "port";
-    private static final String ARGS_NAME_OFFLINE_PATH = "path";
     private static final String ARGS_NAME_ONLINE_URL = "url";
     private static final String ARGS_NAME_SAVE_PATH = "save_url";
     private static final String ARGS_NAME_EMOJI_JSON_PATH = "emoji_path";
     private static final String ARGS_NAME_EMOJI_I18N_JSON_PATH = "emoji_i18n_path";
     private static final String STRING_SYMBOL_EQUAL = "=";
-    private static final String EMOJI_REMOTE_ONLINE_URL = "https://unicode.org/emoji/charts/full-emoji-list.html";
+    private static final String EMOJI_REMOTE_ONLINE_URL = "https://beyond.tain.one/full-emoji-list.html";
+    //    private static final String EMOJI_REMOTE_ONLINE_URL = "https://unicode.org/emoji/charts/full-emoji-list.html";
     private static Map<String, String> ARGS_MAP;
 
     public static void main(String[] args) throws IOException {
         ARGS_MAP = argsParser(args);
         Document root = getDocument();
 
-        Elements tdTags;
-        Elements trTags = root.getElementsByTag("tr");
-        String aliasBigHead = null;
-        String aliasMediumHead = null;
-        Element bighead;
-        Element mediumhead;
         JSONArray emojis = new JSONArray();
-        String desc;
-        JSONObject emoji;
+
         Map<String, JSONObject> emojiMap = getJsonMapFromEmojiJson(ARGS_MAP.get(ARGS_NAME_EMOJI_JSON_PATH));
         Map<String, String> emojiI18nMap = getI18nMapFromEmojiI18nJson(ARGS_MAP.get(ARGS_NAME_EMOJI_I18N_JSON_PATH));
-        for (Element trTag : trTags) {
-            bighead = trTag.select("th.bighead>a").first();
+        String aliasBigHead = null, aliasMediumHead = null;
+        for (Element trTag : root.getElementsByTag("tr")) {
+            Element bighead = trTag.select("th.bighead>a").first();
             if (!Objects.isNull(bighead)) {
                 aliasBigHead = bighead.attr("name");
                 continue;
             }
-            mediumhead = trTag.select("th.mediumhead>a").first();
+            Element mediumhead = trTag.select("th.mediumhead>a").first();
             if (!Objects.isNull(mediumhead)) {
                 aliasMediumHead = mediumhead.attr("name");
                 continue;
             }
-            tdTags = trTag.children();
+            Elements tdTags = trTag.children();
             if (!tdTags.get(1).hasClass("code")) {
                 continue;
             }
-            desc = Objects.requireNonNull(tdTags.last()).text().replaceAll("[^\\p{L}\\p{M}\\p{N}\\p{P}\\p{Z}\\p{Cf}\\p{Cs}\\p{Sc}\\s]", "");
+            String desc = Objects.requireNonNull(tdTags.last()).text().replaceAll("[^\\p{L}\\p{M}\\p{N}\\p{P}\\p{Z}\\p{Cf}\\p{Cs}\\p{Sc}\\s]", "");
 
             String emojiChar = tdTags.get(2).text();
             if (tdTags.get(1).text().endsWith("U+FE0F U+20E3")) {
                 emojiChar = new StringBuilder(emojiChar).deleteCharAt(1).toString();
             }
+            JSONObject emoji = new JSONObject();
             if (!emojiMap.containsKey(emojiChar)) {
-                emoji = new JSONObject();
                 emoji.put("emojiChar", emojiChar);
                 emoji.put("emoji", convertEmoji2Unicode(emojiChar));
                 emoji.put("description", emojiI18nMap.getOrDefault(emojiChar, desc));
                 emoji.put("aliases", desc.replace(" ", "_"));
+
                 emoji.put("tags", Arrays.asList(aliasBigHead, aliasMediumHead));
             } else {
                 emoji = emojiMap.get(emojiChar);
@@ -133,37 +124,6 @@ public class JsonGenerator {
             assert response.body() != null;
             return Jsoup.parse(response.body().string());
         }
-//        if (isBlank(ARGS_MAP.get(ARGS_NAME_OFFLINE_PATH))) {
-//            return getConnection().get();
-//        } else {
-//            return Jsoup.parse(new File(ARGS_MAP.get(ARGS_NAME_OFFLINE_PATH)), "utf-8", "https://unicode.org/");
-//        }
-    }
-
-    /**
-     * builder jsoup connection
-     *
-     * @return jsoup connection
-     */
-    private static Connection getConnection() {
-        Connection connect = Jsoup.connect(ARGS_MAP.getOrDefault(ARGS_NAME_ONLINE_URL, EMOJI_REMOTE_ONLINE_URL))
-//                .proxy(SocksProxy.create(new InetSocketAddress("127.0.0.1", 10808), 5))
-//                .timeout(Integer.MAX_VALUE)
-                .maxBodySize(Integer.MAX_VALUE);
-        if (!isBlank(ARGS_MAP.get(ARGS_NAME_PROXY_HOST)) && !isBlank(ARGS_MAP.get(ARGS_NAME_PROXY_PORT))) {
-            connect.proxy(ARGS_MAP.get(ARGS_NAME_PROXY_HOST), Integer.parseInt(ARGS_MAP.get(ARGS_NAME_PROXY_PORT)));
-        }
-        return connect;
-    }
-
-    /**
-     * like apache commons lang 3 StringUtils.isBlank
-     *
-     * @param str check string
-     * @return blank is true,else false
-     */
-    private static boolean isBlank(String str) {
-        return Objects.isNull(str) || str.trim().isEmpty();
     }
 
     /**
@@ -208,7 +168,7 @@ public class JsonGenerator {
     }
 
     private static Map<String, String> getI18nMapFromEmojiI18nJson(String emojiI18nPath) {
-        if (Objects.isNull(emojiI18nPath) || emojiI18nPath.length() == 0) {
+        if (Objects.isNull(emojiI18nPath) || emojiI18nPath.isEmpty()) {
             return Collections.emptyMap();
         }
         Map<String, String> emojiMap;
